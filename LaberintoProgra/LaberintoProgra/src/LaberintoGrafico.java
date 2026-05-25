@@ -1,39 +1,31 @@
 import javax.swing.*;
 import java.awt.*;
 
-// Clase que hereda de JPanel para graficar
 public class LaberintoGrafico extends JPanel {
 
-    // Atributo que guarda el estado actual del laberinto
+    // ── Laberinto activo ────────────────────────────────────────────────────
     private int[][] laberinto;
+    private int TAM = 60; // Tamaño dinámico
 
-    // Atributo que define el tamaño en píxeles para dibujar
-    private final int TAM = 60;
-
-    // Atribut contador global para el número de llamadas a la función recursiva
+    // ── Variables globales de métricas (Salida por Terminal) ────────────────
     private int  llamadas   = 0;
-
-    // Atributo contador global para los retrocesos realizados
     private int  retrocesos = 0;
-
-    // Atributo variable para guardar el tiempo de inicio de la ejecución
     private long inicio;
-
-    // Atributo vVariable para guardar el tiempo de fin de la ejecución
     private long fin;
 
-    // Atributo que uarda el nivel máximo de recursividad
+    // ── RETO 4: métricas extra ──────────────────────────────────────────────
     private int profundidad = 0;
-
-    // Atributo contador de celdas únicas exploradas
     private int nodos       = 0;
 
-    // Atributo bandera para determinar que reto se va a ejecutar
+    // ── Control de Retos ────────────────────────────────────────────────────
     private int tipoRetoActivo = 0;
 
-    // Main
+    // ═══════════════════════════════════════════════════════════════════════
+    // MAIN
+    // ═══════════════════════════════════════════════════════════════════════
     public static void main(String[] args) {
 
+        // ── VENTANA 1: elegir tamaño de matriz ──────────────────────────────
         String[] tamanos = {
                 "1 - Matriz 5x5",
                 "2 - Matriz 10x10",
@@ -50,17 +42,18 @@ public class LaberintoGrafico extends JPanel {
                 tamanos[0]
         );
 
-        if (tamanoElegido == null) return;
+        if (tamanoElegido == null) return; 
 
         int indiceTamano = 0;
         for (int i = 0; i < tamanos.length; i++) {
             if (tamanos[i].equals(tamanoElegido)) { indiceTamano = i; break; }
         }
 
+        // ── VENTANA 2: elegir tipo de reto ───────────────────────────────────
         String[] retos = {
                 "RETO 1 - Medir impacto del tamaño",
-                "RETO 2 - Orden: derecha primero",
-                "RETO 2 - Orden: abajo primero",
+                "RETO 2 - Antes (Arriba, Derecha, Abajo, Izquierda)",
+                "RETO 2 - Después (Derecha primero)",
                 "RETO 3 - Laberinto sin solución",
                 "RETO 4 - Visualización avanzada",
                 "RETO 5 - Heurística Manhattan"
@@ -83,29 +76,44 @@ public class LaberintoGrafico extends JPanel {
             if (retos[i].equals(retoElegido)) { indiceReto = i; break; }
         }
 
-        // Constructor de instancia del panel donde se dibujará
         LaberintoGrafico panel = new LaberintoGrafico();
-        panel.tipoRetoActivo = indiceReto;
+        panel.tipoRetoActivo = indiceReto; 
 
         JFrame ventana = new JFrame("Backtracking  |  " + tamanoElegido + "  |  " + retoElegido);
         ventana.setLayout(new BorderLayout());
         ventana.add(panel, BorderLayout.CENTER);
         ventana.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        if (indiceReto == 3) {
-            if      (indiceTamano == 0) panel.laberinto = panel.getSinSolucion5x5();
-            else if (indiceTamano == 1) panel.laberinto = panel.getSinSolucion10x10();
-            else                        panel.laberinto = panel.getSinSolucion20x20();
-        } else {
-            if      (indiceTamano == 0) panel.laberinto = panel.get5x5();
-            else if (indiceTamano == 1) panel.laberinto = panel.get10x10();
-            else                        panel.laberinto = panel.get20x20();
+        // ── Asignar laberinto y ajustar tamaño visual dinámicamente ──────────
+        if (indiceReto == 3) { // RETO 3 (Sin solución)
+            if (indiceTamano == 0) {
+                panel.laberinto = panel.getSinSolucion5x5();
+                panel.TAM = 80;
+            } else if (indiceTamano == 1) {
+                panel.laberinto = panel.getSinSolucion10x10();
+                panel.TAM = 50;
+            } else {
+                panel.laberinto = panel.getSinSolucion20x20();
+                panel.TAM = 35; // Más pequeño para que quepa en pantalla
+            }
+        } else { // Demás Retos
+            if (indiceTamano == 0) {
+                panel.laberinto = panel.get5x5();
+                panel.TAM = 80;
+            } else if (indiceTamano == 1) {
+                panel.laberinto = panel.get10x10();
+                panel.TAM = 50;
+            } else {
+                panel.laberinto = panel.get20x20();
+                panel.TAM = 35; // Más pequeño para que quepa en pantalla
+            }
         }
 
         ventana.pack();
         ventana.setLocationRelativeTo(null);
         ventana.setVisible(true);
 
+        // ── Ejecutar backtracking en hilo separado ───────────────────────────
         final int retoFinal = indiceReto;
         new Thread(() -> {
 
@@ -115,7 +123,6 @@ public class LaberintoGrafico extends JPanel {
             panel.nodos       = 0;
 
             panel.inicio = System.nanoTime();
-
             boolean solucion;
 
             if (retoFinal == 5) {
@@ -127,6 +134,7 @@ public class LaberintoGrafico extends JPanel {
             panel.fin = System.nanoTime();
             panel.repaint();
 
+            // Resultados por terminal
             String res = (solucion ? "Solución encontrada" : "Sin solución")
                     + "\nLlamadas recursivas : " + panel.llamadas
                     + "\nRetrocesos          : " + panel.retrocesos
@@ -143,7 +151,9 @@ public class LaberintoGrafico extends JPanel {
         }).start();
     }
 
-    // Método para pintar la matriz
+    // ═══════════════════════════════════════════════════════════════════════
+    // PINTAR EL LABERINTO
+    // ═══════════════════════════════════════════════════════════════════════
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -155,11 +165,11 @@ public class LaberintoGrafico extends JPanel {
         for (int fila = 0; fila < filas; fila++) {
             for (int col = 0; col < cols; col++) {
                 switch (laberinto[fila][col]) {
-                    case 0: g.setColor(Color.WHITE);             break;
-                    case 1: g.setColor(Color.BLACK);             break;
-                    case 2: g.setColor(new Color(30, 120, 255)); break;
-                    case 9: g.setColor(new Color(50, 200, 80));  break;
-                    case 5: g.setColor(new Color(220, 60, 60));  break;
+                    case 0: g.setColor(Color.WHITE);             break; 
+                    case 1: g.setColor(Color.BLACK);             break; 
+                    case 2: g.setColor(new Color(30, 120, 255)); break; 
+                    case 9: g.setColor(new Color(50, 200, 80));  break; 
+                    case 5: g.setColor(new Color(220, 60, 60));  break; 
                 }
                 g.fillRect(col * TAM, fila * TAM, TAM, TAM);
                 g.setColor(Color.GRAY);
@@ -168,19 +178,19 @@ public class LaberintoGrafico extends JPanel {
         }
     }
 
-    // Método para ajustar el tamaño de la ventana de la matriz
     @Override
     public Dimension getPreferredSize() {
         if (laberinto == null) return new Dimension(400, 400);
         return new Dimension(laberinto[0].length * TAM + 2, laberinto.length * TAM);
     }
 
-    // Método  para arrancar el algoritmo desde la posición inicial
+    // ═══════════════════════════════════════════════════════════════════════
+    // ALGORITMO DE BACKTRACKING 
+    // ═══════════════════════════════════════════════════════════════════════
     public boolean resolver(int fila, int col) {
         return resolver(fila, col, 0);
     }
 
-    // Método Algoritmo base de backtracking
     private boolean resolver(int fila, int col, int prof) {
         repaint();
         dormir();
@@ -209,23 +219,21 @@ public class LaberintoGrafico extends JPanel {
         repaint();
         dormir();
 
-        if (tipoRetoActivo == 1) {
-            if (resolver(fila, col + 1, prof + 1)) return true;
-            if (resolver(fila + 1, col, prof + 1)) return true;
-            if (resolver(fila - 1, col, prof + 1)) return true;
-            if (resolver(fila, col - 1, prof + 1)) return true;
-        }
-        else if (tipoRetoActivo == 2) {
-            if (resolver(fila + 1, col, prof + 1)) return true;
-            if (resolver(fila, col + 1, prof + 1)) return true;
-            if (resolver(fila - 1, col, prof + 1)) return true;
-            if (resolver(fila, col - 1, prof + 1)) return true;
-        }
-        else {
-            if (resolver(fila - 1, col, prof + 1)) return true;
-            if (resolver(fila, col + 1, prof + 1)) return true;
-            if (resolver(fila + 1, col, prof + 1)) return true;
-            if (resolver(fila, col - 1, prof + 1)) return true;
+        // ── Explorar con lógica explícita de 'if' según el Reto ──
+
+        if (tipoRetoActivo == 2) { 
+            // RETO 2 - Después: Derecha primero (Luego Abajo para evitar subir innecesariamente)
+            if (resolver(fila, col + 1, prof + 1)) return true; // 1. Derecha
+            if (resolver(fila + 1, col, prof + 1)) return true; // 2. Abajo
+            if (resolver(fila - 1, col, prof + 1)) return true; // 3. Arriba
+            if (resolver(fila, col - 1, prof + 1)) return true; // 4. Izquierda
+        } 
+        else { 
+            // ORDEN ANTES (y Resto de Retos): Arriba, Derecha, Abajo, Izquierda
+            if (resolver(fila - 1, col, prof + 1)) return true; // 1. Arriba
+            if (resolver(fila, col + 1, prof + 1)) return true; // 2. Derecha
+            if (resolver(fila + 1, col, prof + 1)) return true; // 3. Abajo
+            if (resolver(fila, col - 1, prof + 1)) return true; // 4. Izquierda
         }
 
         laberinto[fila][col] = 5;
@@ -236,7 +244,9 @@ public class LaberintoGrafico extends JPanel {
         return false;
     }
 
-    // Método para preparar el terreno buscando
+    // ═══════════════════════════════════════════════════════════════════════
+    // RETO 5 — Resolver con heurística de distancia Manhattan
+    // ═══════════════════════════════════════════════════════════════════════
     public boolean resolverHeuristico(int fila, int col) {
         int filaMeta = 0, colMeta = 0;
         for (int f = 0; f < laberinto.length; f++)
@@ -246,7 +256,6 @@ public class LaberintoGrafico extends JPanel {
         return resolverHeuristico(fila, col, 0, filaMeta, colMeta);
     }
 
-    // Método  Algoritmo inteligente que ordena movimientos por distancia a la meta
     private boolean resolverHeuristico(int fila, int col, int prof, int filaMeta, int colMeta) {
         repaint();
         dormir();
@@ -275,7 +284,6 @@ public class LaberintoGrafico extends JPanel {
         repaint();
         dormir();
 
-        // Variable local: Arreglo de direcciones para poder ordenarlas (Reto 5)
         int[][] dirs = {{-1,0},{0,1},{1,0},{0,-1}};
         for (int i = 0; i < dirs.length - 1; i++) {
             for (int j = 0; j < dirs.length - 1 - i; j++) {
@@ -304,7 +312,9 @@ public class LaberintoGrafico extends JPanel {
         return false;
     }
 
-    // Método  Detiene la ejecución unos milisegundos para permitir la animación
+    // ═══════════════════════════════════════════════════════════════════════
+    // UTILITARIO
+    // ═══════════════════════════════════════════════════════════════════════
     public void dormir() {
         try {
             Thread.sleep(150);
@@ -313,7 +323,9 @@ public class LaberintoGrafico extends JPanel {
         }
     }
 
-    // Método getter que devuelve la matriz estática 5x5
+    // ═══════════════════════════════════════════════════════════════════════
+    // RETO 1 — Laberintos con solución (3 tamaños)
+    // ═══════════════════════════════════════════════════════════════════════
     public int[][] get5x5() {
         return new int[][] {
                 {0, 1, 0, 0, 0},
@@ -324,7 +336,6 @@ public class LaberintoGrafico extends JPanel {
         };
     }
 
-    // Método getter que devuelve la matriz estática 10x10
     public int[][] get10x10() {
         return new int[][] {
                 {0, 1, 0, 0, 0, 0, 1, 0, 0, 0},
@@ -340,7 +351,6 @@ public class LaberintoGrafico extends JPanel {
         };
     }
 
-    // Método getter que devuelve la matriz estática  20x20
     public int[][] get20x20() {
         return new int[][] {
                 {0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0},
@@ -351,8 +361,8 @@ public class LaberintoGrafico extends JPanel {
                 {0,1,1,1,1,0,0,1,1,1,1,0,1,1,1,0,1,1,1,0},
                 {0,0,0,1,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0},
                 {1,1,0,1,0,1,1,1,1,0,1,1,1,0,1,1,1,0,1,0},
-                {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-                {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+                {0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0},
+                {0,1,1,1,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0},
                 {0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0},
                 {1,1,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0},
                 {0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0},
@@ -366,25 +376,26 @@ public class LaberintoGrafico extends JPanel {
         };
     }
 
-    // Método getter que devuelve matriz 5x5 bloqueada para eevalaucion de recursividad
+    // ═══════════════════════════════════════════════════════════════════════
+    // RETO 3 — Laberintos sin solución (3 tamaños)
+    // ═══════════════════════════════════════════════════════════════════════
     public int[][] getSinSolucion5x5() {
         return new int[][] {
                 {0, 0, 0, 0, 0},
                 {0, 1, 0, 1, 0},
-                {1, 1, 1, 1, 1},
+                {1, 1, 1, 1, 1},  // barrera completa
                 {0, 0, 0, 0, 0},
                 {0, 0, 0, 0, 2}
         };
     }
 
-    // Método getter que Devuelve matriz 10x10 bloqueada para evaluacion de  recursividad
     public int[][] getSinSolucion10x10() {
         return new int[][] {
                 {0, 1, 0, 0, 0, 0, 1, 0, 0, 0},
                 {0, 1, 0, 1, 1, 0, 1, 0, 1, 0},
                 {0, 0, 0, 0, 1, 0, 0, 0, 1, 0},
                 {0, 0, 0, 0, 0, 0, 1, 0, 0, 0},
-                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+                {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  // barrera completa
                 {0, 1, 1, 1, 1, 0, 1, 1, 1, 0},
                 {0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
                 {1, 1, 0, 1, 0, 1, 1, 0, 1, 0},
@@ -393,7 +404,6 @@ public class LaberintoGrafico extends JPanel {
         };
     }
 
-    // Método getter que devuelve matriz 20x20 bloqueada para evaluacion de recursividad
     public int[][] getSinSolucion20x20() {
         return new int[][] {
                 {0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0},
@@ -405,7 +415,7 @@ public class LaberintoGrafico extends JPanel {
                 {0,0,0,1,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0},
                 {1,1,0,1,0,1,1,1,1,0,1,1,1,0,1,1,1,0,1,0},
                 {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-                {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+                {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},  // barrera completa
                 {0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0},
                 {1,1,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0},
                 {0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0},
